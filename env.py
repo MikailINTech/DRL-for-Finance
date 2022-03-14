@@ -3,7 +3,7 @@ from gym import spaces
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import torch
 
 
 
@@ -32,7 +32,7 @@ class Decode_v1(gym.Env):
 
 
     def get_reward(self, weights):
-        if len(self.weights) == 0:
+        if len(weights) < 2:
             return 0
         pred_returns = (1 + (weights * self.factors_returns[:self.current_index]).sum(axis=1)).cumprod(
           ).pct_change().fillna(0)
@@ -46,24 +46,32 @@ class Decode_v1(gym.Env):
   
     
     def step(self, action):
-        done = self.current_index == self.last_index
+        done = self.current_index == self.last_index - 1
         if not done :
             self.current_index += 1
-        self.weights_list.append(action.cpu().numpy())
-        weights = pd.DataFrame(index=self.factors_returns[:self.current_index].index, columns = self.factors_returns[:self.current_index].columns)
-        weights[:] = self.weights_list
-        self.weights_df = weights
-        info = {}
-        reward = self.get_reward(weights)
-        observation = self.factors_returns.values[self.current_index]
-        
-        return observation, reward, done, info
+            if torch.is_tensor(action):
+                action = action.cpu().numpy()
+            self.weights_list.append(action)
+            weights = pd.DataFrame(index=self.factors_returns[:self.current_index].index, columns = self.factors_returns[:self.current_index].columns)
+            weights[:] = self.weights_list
+            self.weights_df = weights
+            info = {}
+            reward = self.get_reward(weights)
+            observation = self.factors_returns.values[self.current_index] 
+            return observation, reward, done, info
+        else:
+            info = {}
+            reward = self.get_reward(self.weights_df)
+            observation = self.factors_returns.values[self.current_index] 
+            return observation, reward, done, info
+            
 
 
 
     def reset(self):
         self.current_index = 0
-        self.weights = []
+        self.weights_list = []
+        self.weights_df = None
         observation = self.factors_returns.values[self.current_index]
         return observation  # reward, done, info can't be included
     
