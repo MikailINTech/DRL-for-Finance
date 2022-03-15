@@ -9,7 +9,7 @@ import torch
 class Decode_v1(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, factors_returns=None, strategy_returns=None, window=5):
+    def __init__(self, factors_returns=None, strategy_returns=None, window=5, random_start=True):
         super(Decode_v1, self).__init__()
         # Define action and observation space
         # They must be gym.spaces objects
@@ -26,8 +26,9 @@ class Decode_v1(gym.Env):
         self.deviation = factors_returns.rolling(window).std()
         self.deviation /= self.deviation.max()
 
+        self.random_start = random_start
         self.last_index = len(factors_returns)
-        self.first_index = np.random.randint(window, self.last_index - 6)
+        self.first_index = 0 if not random_start else np.random.randint(window, self.last_index - 6)
         self.current_index = self.first_index
 
         self.weights_list = []
@@ -76,7 +77,7 @@ class Decode_v1(gym.Env):
             return observation, reward, done, info
 
     def reset(self):
-        self.first_index = np.random.randint(self.window, self.last_index - 6)
+        self.first_index = 0 if not self.random_start else np.random.randint(self.window, self.last_index - 6)
         self.current_index = self.first_index
         self.weights_list = []
         self.weights_df = None
