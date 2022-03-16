@@ -9,7 +9,7 @@ import torch
 class Decode_v1(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, factors_returns=None, strategy_returns=None, window=5, random_start=False):
+    def __init__(self, factors_returns=None, strategy_returns=None, window=2, random_start=False):
         super(Decode_v1, self).__init__()
         assert window >= 2, "Std deviation can not be computed on 1 value, set higher window"
 
