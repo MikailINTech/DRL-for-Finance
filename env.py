@@ -9,32 +9,33 @@ import torch
 class Decode_v1(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, factors_returns=None, strategy_returns=None, window=5, random_start=True):
+    def __init__(self, factors_returns=None, strategy_returns=None, window=2, random_start=False):
         super(Decode_v1, self).__init__()
+        assert window >= 2, "Std deviation can not be computed on 1 value, set higher window"
+
         # Define action and observation space
-        # They must be gym.spaces objects
-        # Example when using discrete actions:
         self.action_space = spaces.Box(-1, 1, (11,))
-        # Example for using image as input (channel-first; channel-last also works):
         self.observation_space = spaces.Box(-1, 1, (11 * 3,))
 
+        # store input
         self.factors_returns = factors_returns
         self.strategy_returns = strategy_returns
+        self.max_factor_value = factors_returns.max().max()
 
         # computation of deviation
         self.window = window
         self.deviation = factors_returns.rolling(window).std()
         self.deviation /= self.deviation.max()
 
+        # define start and stop
         self.random_start = random_start
         self.last_index = len(factors_returns)
-        self.first_index = 0 if not random_start else np.random.randint(window, self.last_index - 6)
+        self.first_index = window if not random_start else np.random.randint(window, self.last_index - 6)
         self.current_index = self.first_index
 
+        # initialize weights
         self.weights_list = []
         self.weights_df = None
-
-        self.max_factor_value = factors_returns.max().max()
 
     def _get_observation(self):
         factors = self.factors_returns.values[self.current_index] / self.max_factor_value
@@ -53,7 +54,7 @@ class Decode_v1(gym.Env):
         turn_over = 0.0020 * 365 * ((weights - weights.shift(1)).abs().fillna(0).values) / (
             (weights.index[-1] - weights.index[0]).days) * np.sqrt(weights.shape[0] * (weights.shape[1] + 1))
         error_terms = np.concatenate([tracking_error, turn_over.flatten()], axis=0)
-        return -np.sqrt(np.mean(error_terms ** 2))
+        return -np.sqrt(np.mean(error_terms ** 2)) / (self.current_index - self.first_index)
 
     def step(self, action):
         done = self.current_index == self.last_index - 1
@@ -77,7 +78,7 @@ class Decode_v1(gym.Env):
             return observation, reward, done, info
 
     def reset(self):
-        self.first_index = 0 if not self.random_start else np.random.randint(self.window, self.last_index - 6)
+        self.first_index = self.window if not self.random_start else np.random.randint(self.window, self.last_index - 6)
         self.current_index = self.first_index
         self.weights_list = []
         self.weights_df = None
