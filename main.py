@@ -159,36 +159,47 @@ def test(policy, namefile, env):
     return subdf
 
 
-def run(policy, namefile, env, save = True):
-    namefile = "models/" + namefile
+
+def run(policy, namefile, env, save = True, test= True):
+    namefilesave = "models/" + namefile
     policy.train(env)
     
     if save:
-        policy.actor.model_file = namefile
-        policy.critic.model_file = namefile
+        policy.actor.model_file = namefilesave
+        policy.critic.model_file = namefilesave
         policy.save()
 
-    return(policy)
+    if test :
+        weights = policy.test_policy(env)
+        print(weights)
+        plot_results(weights)
+
+        #------------ Submission ----------
+        
+        subdf = create_submission(weights)
+        subdf.to_csv('submission/submission'+namefile +'.csv')
+        return subdf
+
 
 if __name__ == '__main__':
     timestr = time.strftime("%Y%m%d-%H%M%S")
-    namefile = "models/ac_agent" + timestr
+    namefile = "ac_agent" + timestr
     env = fenv.Decode_v1(factors_returns, strategy_returns,window=5, random_start=False)
     #env = gym.make('Pendulum-v1')
     
     obs_space = env.observation_space.shape[0]
     act_space = env.action_space.shape[0]
 
-    lr = [0.0001,0.001]
-    batch_size = 10
-    policy_epochs = 10000
+    lr = [0.000005,0.00005]
+    batch_size = 25
+    policy_epochs = 5000
 
     policy = actorcritic.ActorCritic(obs_space,act_space,lr,batch_size,policy_epochs)
 
 
-    run(policy, namefile, env)
-
-    #test(policy, namefile, env)
+    #run(policy, namefile, env)
+    namefile = "ac_agent20220316-155543"
+    test(policy, namefile, env)
 
 
     

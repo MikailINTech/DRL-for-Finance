@@ -51,9 +51,9 @@ class Actor(nn.Module):
             
         observation_tensor = torch.tensor(obs, dtype=torch.float)
         action_distribution = self.forward(observation_tensor)
-        actions = action_distribution.sample()
+        #actions = action_distribution.sample()
         #actions = torch.clamp(actions, min=-1, max=1)
-        # actions = F.softmax(action_distribution.sample()) In case of ?
+        actions = F.softmax(action_distribution.sample()) #In case of ?
         return cast(
             np.ndarray,
             actions.cpu().detach().numpy(),
@@ -136,7 +136,6 @@ class ActorCritic():
         v = (self.critic.forward(ob_no.float())).squeeze()
         v_next = torch.cat((v[1:],torch.tensor([0])))
         targets = reward_n + self.gamma * v_next.squeeze()
-        print(reward_n)
         loss = self.criticloss(v.float(), targets.float())
         
         self.optimizerC.zero_grad()
@@ -161,9 +160,17 @@ class ActorCritic():
 
 
     def discounted_return(self, rewards):
-
+        
         n = len(rewards)
         list_of_discounted_cumsums= (self.gamma**(np.tile(np.arange(n),(n,1)))*rewards).sum(axis=1)
+
+        return list_of_discounted_cumsums
+
+    def _discounted_cumsum(self, rewards):
+
+        n = len(rewards)
+        list_of_discounted_cumsums= np.triu(self.gamma**(np.tile(np.arange(n),(n,1)) - np.indices((n, n))[0])*rewards).sum(axis=1)
+        
 
         return list_of_discounted_cumsums
 
@@ -195,27 +202,30 @@ class ActorCritic():
                 action = self.actor.get_action(obs)
                 value = self.critic(obs).detach().numpy()
                 obs, reward, done, _ = env.step(action)
-                print(reward)
                 #Noting the list of elements done
                 action_l.append(action)
                 rewards_l.append(reward)
                 value_l.append(value)
                 itera += 1
 
-            discount_r = self.discounted_return(np.array(rewards_l))
-            print(discount_r)
+            discount_r = self._discounted_cumsum(np.array(rewards_l))
+            #print(discount_r)
+            #discount_r = np.array(rewards_l)
             obs_l = np.array(obs_l)
-            l1 = self.update_critic(obs_l,discount_r)
+            for i in range(10):
+                l1 = self.update_critic(obs_l,discount_r)
 
             adv = self.estimate_adv(obs_l, discount_r)
-            l2 = self.update_actor(obs_l,action_l,adv)
+            for i in range(3):
+                l2 = self.update_actor(obs_l,action_l,adv)
 
             loss.append([l1.item(),l2.item()])
 
             if j%10 ==0 or reward > 50 :
                 print(f"Epoch {j} : Loss is {loss[-1]}")
                 print(reward)
-            
+                print(action_l[-1])
+
         return loss
 
 
