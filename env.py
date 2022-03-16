@@ -24,13 +24,13 @@ class Decode_v1(gym.Env):
 
         # computation of deviation
         self.window = window
-        self.deviation = factors_returns.rolling(window).std()
+        self.deviation = factors_returns.rolling(window, min_periods=1).std(ddof=0)
         self.deviation /= self.deviation.max()
 
         # define start and stop
         self.random_start = random_start
         self.last_index = len(factors_returns)
-        self.first_index = window if not random_start else np.random.randint(window, self.last_index - 6)
+        self.first_index = 0 if not random_start else np.random.randint(0, self.last_index - 6)
         self.current_index = self.first_index
 
         # initialize weights
@@ -78,7 +78,7 @@ class Decode_v1(gym.Env):
             return observation, reward, done, info
 
     def reset(self):
-        self.first_index = self.window if not self.random_start else np.random.randint(self.window, self.last_index - 6)
+        self.first_index = 0 if not self.random_start else np.random.randint(0, self.last_index - 6)
         self.current_index = self.first_index
         self.weights_list = []
         self.weights_df = None
