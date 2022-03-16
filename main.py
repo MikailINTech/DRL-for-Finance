@@ -1,3 +1,4 @@
+from re import I
 import env as fenv
 import pg_agent
 import buffer
@@ -141,37 +142,54 @@ def create_submission(weights):
     submission.index.names = ['Id']
     return submission
 
+def test(policy, namefile, env):
+    #------------Loading---------------
+    openfile = "models/" + namefile
+    policy.actor.load(openfile)
+
+    #----------- Testing --------------
+    weights = policy.test_policy(env)
+    print(weights)
+    plot_results(weights)
+
+    #------------ Submission ----------
+    
+    subdf = create_submission(weights)
+    subdf.to_csv('submission/submission'+namefile +'.csv')
+    return subdf
 
 
+def run(policy, namefile, env, save = True):
+    namefile = "models/" + namefile
+    policy.train(env)
+    
+    if save:
+        policy.actor.model_file = namefile
+        policy.critic.model_file = namefile
+        policy.save()
+
+    return(policy)
 
 if __name__ == '__main__':
     timestr = time.strftime("%Y%m%d-%H%M%S")
-    namefile = "models/ac_agent_car" + timestr
-    #env = fenv.Decode_v1(factors_returns, strategy_returns)
-    env = gym.make('Pendulum-v1')
+    namefile = "models/ac_agent" + timestr
+    env = fenv.Decode_v1(factors_returns, strategy_returns,window=5, random_start=False)
+    #env = gym.make('Pendulum-v1')
+    
     obs_space = env.observation_space.shape[0]
     act_space = env.action_space.shape[0]
 
-    lr = [0.1,0.0001]
-    batch_size = 32
+    lr = [0.0001,0.001]
+    batch_size = 10
     policy_epochs = 10000
 
     policy = actorcritic.ActorCritic(obs_space,act_space,lr,batch_size,policy_epochs)
-    policy.actor.model_file = namefile
-    policy.train(env)
 
-    policy.actor.save()
-    #------------Loading---------------
-    #policy.actor.load("pg_agent2.pth")
 
-    #----------- Testing --------------
-    if False:
-        weights = policy.test_policy(env)
-        print(weights)
-        plot_results(weights)
+    run(policy, namefile, env)
 
-        #------------ Submission ----------
-        
-        subdf = create_submission(weights)
-        subdf.to_csv('submission/submission'+timestr +'.csv')
+    #test(policy, namefile, env)
+
+
+    
     print("done")

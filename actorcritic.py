@@ -31,9 +31,9 @@ class Actor(nn.Module):
         super().__init__()
         self.obs_dim = obs_space
         self.act_dim = act_space
-        self.linear1 = nn.Linear(obs_space, 128)
-        self.linear2 = nn.Linear(128, act_space)
-        self.linear3 = nn.Linear(128, act_space)
+        self.linear1 = nn.Linear(obs_space, 64)
+        self.linear2 = nn.Linear(64, act_space)
+        self.linear3 = nn.Linear(64, act_space)
 
         self.distribution = torch.distributions.Normal
 
@@ -73,8 +73,8 @@ class Critic(nn.Module):
         super().__init__()
         self.obs_dim = obs_space
         self.act_dim = act_space
-        self.linear1 = nn.Linear(obs_space, 128)
-        self.linear2 = nn.Linear(128,1)
+        self.linear1 = nn.Linear(obs_space, 64)
+        self.linear2 = nn.Linear(64,1)
 
         self.distribution = torch.distributions.Normal
 
@@ -104,6 +104,15 @@ class ActorCritic():
 
         self.criticloss = nn.MSELoss()
 
+    def save(self):
+        self.actor.save()
+        self.critic.save()
+
+    def load(self, model_file):
+        self.actor.load(model_file)
+        self.critic.load(model_file)
+
+
     def update_actor(self, obs, actions, advantages):
         observations = torch.from_numpy(np.array(obs))
         actions = torch.from_numpy(np.array(actions))
@@ -124,10 +133,10 @@ class ActorCritic():
         ob_no = torch.from_numpy(obs)
         reward_n = torch.from_numpy(rewards)
 
-        v = (self.critic.forward(ob_no)).squeeze()
+        v = (self.critic.forward(ob_no.float())).squeeze()
         v_next = torch.cat((v[1:],torch.tensor([0])))
         targets = reward_n + self.gamma * v_next.squeeze()
-
+        print(reward_n)
         loss = self.criticloss(v.float(), targets.float())
         
         self.optimizerC.zero_grad()
@@ -141,13 +150,13 @@ class ActorCritic():
         current_obs = torch.from_numpy(obs)
         re_n = torch.from_numpy(reward)
 
-        v = (self.critic.forward(current_obs)).squeeze()
+        v = (self.critic.forward(current_obs.float())).squeeze()
         v_next = torch.cat((v[1:],torch.tensor([0])))
         Q = re_n + self.gamma * v_next.squeeze()
 
         adv_n = Q - v
         adv_n = (adv_n - adv_n.mean()) / (adv_n.std() + 1e-8)
-
+        
         return adv_n.detach().numpy()
 
 
@@ -162,15 +171,14 @@ class ActorCritic():
 
     def train(self, env, seed=123):
         # SETTING SEED: it is good practice to set seeds when running experiments to keep results comparable
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        env.seed(seed)
+        # np.random.seed(seed)
+        # torch.manual_seed(seed)
+        # env.seed(seed)
 
         loss = []
         epoch = self.policy_epochs
         # Training Loop
         for j in range(epoch):
-
             obs_l    = []
             action_l = []
             value_l  = []
@@ -179,22 +187,23 @@ class ActorCritic():
             ## Initialization
             done = False
             obs = env.reset()
+            itera = 0
             ## Collect rollouts
-            while not done:
-                if j%100 ==0 :
-                    env.render()
-
+            while (not done) and itera < self.batch_size:
                 obs_l.append(obs)
                 obs = torch.tensor(obs, dtype=torch.float32)
                 action = self.actor.get_action(obs)
                 value = self.critic(obs).detach().numpy()
                 obs, reward, done, _ = env.step(action)
+                print(reward)
                 #Noting the list of elements done
                 action_l.append(action)
                 rewards_l.append(reward)
                 value_l.append(value)
+                itera += 1
 
             discount_r = self.discounted_return(np.array(rewards_l))
+            print(discount_r)
             obs_l = np.array(obs_l)
             l1 = self.update_critic(obs_l,discount_r)
 
@@ -203,7 +212,7 @@ class ActorCritic():
 
             loss.append([l1.item(),l2.item()])
 
-            if j%100 ==0 or reward > 50 :
+            if j%10 ==0 or reward > 50 :
                 print(f"Epoch {j} : Loss is {loss[-1]}")
                 print(reward)
             
