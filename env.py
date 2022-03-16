@@ -54,7 +54,7 @@ class Decode_v1(gym.Env):
         turn_over = 0.0020 * 365 * ((weights - weights.shift(1)).abs().fillna(0).values) / (
             (weights.index[-1] - weights.index[0]).days) * np.sqrt(weights.shape[0] * (weights.shape[1] + 1))
         error_terms = np.concatenate([tracking_error, turn_over.flatten()], axis=0)
-        return -np.sqrt(np.mean(error_terms ** 2))
+        return -np.sqrt(np.mean(error_terms ** 2)) / (self.current_index - self.first_index)
 
     def step(self, action):
         done = self.current_index == self.last_index - 1
