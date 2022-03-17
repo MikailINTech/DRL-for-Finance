@@ -75,9 +75,8 @@ class Decode_v1(gym.Env):
             #print(self.strategy_returns[self.first_index:self.current_index])
             tracking_error = (pred_returns.values - self.strategy_returns[self.first_index:self.current_index].iloc[:,
                                                     0].values)
-            #turn_over = 0.0020 * 365 * ((weights - weights.shift(1)).abs().fillna(0).values) / (
-            #    (weights.index[-1] - weights.index[0]).days) * np.sqrt(weights.shape[0] * (weights.shape[1] + 1))
-            #error_terms = np.concatenate([tracking_error, turn_over.flatten()], axis=0)
+            turn_over = (weights - weights.shift(1)).abs().fillna(0).values/ self.window
+            error_terms = np.concatenate([tracking_error, turn_over.flatten()], axis=0)
             return -np.sqrt(np.mean(tracking_error  ** 2))
         else :
             #print(f'We are NOT under window at index {self.current_index}')
@@ -93,11 +92,13 @@ class Decode_v1(gym.Env):
             
             pred_returns = (1 + (weights* self.factors_returns[self.current_index - self.window :self.current_index]).sum(
                 axis=1)).cumprod().pct_change().fillna(0)
-            tracking_error = (pred_returns.values - self.strategy_returns[self.current_index - self.window:self.current_index].iloc[:,
-                                                    0].values)
-#            turn_over = 0.0020 * 365 * ((weights - weights.shift(1)).abs().fillna(0).values) / (
-#                (weights[self.current_index - self.window:self.current_index].index[-1] - weights[self.current_index -#self.window:self.current_index].index[0]).days)*np.sqrt(weights.shape[0] * (weights.shape[1] + 1))
-#            error_terms = np.concatenate([tracking_error, turn_over.flatten()], axis=0)
+            tracking_error = (pred_returns.values - self.strategy_returns[self.current_index - self.window:self.current_index].iloc[:,0].values)
+            turn_over = (weights - weights.shift(1)).abs().fillna(0).values / self.window
+            error_terms = np.concatenate([tracking_error, turn_over.flatten()], axis=0)
+            #print('turn over is')
+            #print(-np.sqrt(np.mean(turn_over.flatten()  ** 2)))
+            #print('error term is')
+            #print(-np.sqrt(np.mean(tracking_error  ** 2)))
             return -np.sqrt(np.mean(tracking_error ** 2))            
 
     def step(self, action):

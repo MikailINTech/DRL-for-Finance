@@ -18,7 +18,7 @@ torch.manual_seed(0)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DDPGagent:
-    def __init__(self, env, hidden_size=256, actor_learning_rate=1e-3, critic_learning_rate=1e-4, gamma=0.99, tau=0.05, max_memory_size=1000000):
+    def __init__(self, env, hidden_size=256, actor_learning_rate=1e-4, critic_learning_rate=1e-3, gamma=0.99, tau=0.05, max_memory_size=1000000):
         # Params
         self.num_states = env.observation_space.shape[0]
         self.num_actions = env.action_space.shape[0]
