@@ -41,6 +41,6 @@ class Actor(nn.Module):
         """
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
-        x = nn.Softmax(dim=1)(self.linear3(x))
-
+        #x = nn.Softmax(dim=1)(self.linear3(x))
+        x = nn.Tanh()(self.linear3(x))
         return x

@@ -18,7 +18,7 @@ torch.manual_seed(0)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DDPGagent:
-    def __init__(self, env, hidden_size=256, actor_learning_rate=1e-4, critic_learning_rate=1e-3, gamma=0.99, tau=0.05, max_memory_size=1000000):
+    def __init__(self, env, hidden_size=256, actor_learning_rate=1e-4, critic_learning_rate=1e-3, gamma=0.99, tau=0.01, max_memory_size=1000000):
         # Params
         self.num_states = env.observation_space.shape[0]
         self.num_actions = env.action_space.shape[0]
@@ -41,8 +41,9 @@ class DDPGagent:
         
         # Training
         self.memory = Memory(max_memory_size)        
-        self.critic_criterion  = nn.SmoothL1Loss()
-        self.actor_optimizer  = optim.Adam(self.actor.parameters(), lr=actor_learning_rate)
+        #self.critic_criterion  = nn.SmoothL1Loss()
+        self.critic_criterion  = nn.MSELoss()
+        self.actor_optimizer  = optim.Adam(self.actor.parameters(), lr=actor_learning_rate,weight_decay = 1e-4)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
         
         # Freeze target networks with respect to optimizers (only update via polyak averaging)
