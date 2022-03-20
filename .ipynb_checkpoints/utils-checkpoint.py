@@ -11,8 +11,8 @@ import gym
 from collections import deque
 import random
 
-random.seed(0)
-np.random.seed(0)
+#random.seed(0)
+#np.random.seed(0)
 
 # Ornstein-Ulhenbeck Process
 # Taken from #https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
