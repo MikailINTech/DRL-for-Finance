@@ -5,8 +5,6 @@ import numpy as np
 import pandas as pd
 import torch
 
-torch.manual_seed(0)
-
 class Decode_v1(gym.Env):
     metadata = {'render.modes': ['human']}
 

@@ -28,11 +28,15 @@ env = Decode_v1(factors_returns=factors_returns,strategy_returns=strategy_return
 
 agent = DDPGagent(env)
 noise = OUNoise(env.action_space)
-batch_size = 64
+batch_size = 128
+nb_episodes = 200
 rewards = []
 avg_rewards = []
 
-for episode in range(50):
+best_env = env
+best_reward = -100
+
+for episode in range(nb_episodes):
     state = env.reset()
     noise.reset()
     episode_reward = 0
@@ -47,18 +51,24 @@ for episode in range(50):
             agent.update(batch_size)        
         
         state = new_state 
-        episode_reward += reward
+        episode_reward += reward 
 
         if done:
             sys.stdout.write("episode: {}, reward: {}, average _reward: {} \n".format(episode, np.round(episode_reward, decimals=2), np.mean(rewards[-10:])))
+            print(f'Env reward is {freward(env.weights_df)}')
+            if freward(env.weights_df) > best_reward :
+                best_env = copy.deepcopy(env)
+                best_reward = freward(env.weights_df)
+                print(f'best reward has been set to {best_reward}')
+                print('\x1b[6;30;42m' + 'best_env has been changed' + '\x1b[0m')
             break
 
     rewards.append(episode_reward)
-    avg_rewards.append(np.mean(rewards[-10:]))
+    avg_rewards.append(np.mean(rewards))
 
-plt.plot(rewards)
-plt.plot(avg_rewards)
-plt.plot()
+plt.plot(rewards,label='Rewards')
+plt.plot(avg_rewards,label='Average rewards')
 plt.xlabel('Episode')
 plt.ylabel('Reward')
+plt.legend()
 plt.show()
